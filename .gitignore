@@ -59,7 +59,6 @@ CLAUDE.md
 /.godot
 /game_material
 /.tmp
-/.cache
 /.cli
 /logs
 /.agent
@@ -68,3 +67,4 @@ CLAUDE.md
 /.codex
 /.opencode
 **/.pack-write-*
+/.cache/

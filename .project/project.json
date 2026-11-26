@@ -1,0 +1,30 @@
+{
+  "$schema": "../schemas/project.schema.json",
+  "project_id": "m_jo4j",
+  "name": "弹珠物语",
+  "author": {
+    "id": "675344608"
+  },
+  "entry": "main.lua",
+  "version": "1.0.0",
+  "description": {
+    "short": "一款手机竖屏弹珠游戏"
+  },
+  "taptap_publish": {
+    "title": "弹珠物语",
+    "description": "一款手机竖屏弹珠游戏",
+    "category": "arcade",
+    "screen_orientation": "portrait",
+    "collection_type": "arcade",
+    "trial_note": "",
+    "app_platforms": "1,2",
+    "app_id": 1100871,
+    "developer_id": 381865,
+    "miniapp_id": "tapmcdr6jkczs8tt9r"
+  },
+  "assets": {
+    "icon": "",
+    "screenshots": [],
+    "promotional_image": ""
+  }
+}
