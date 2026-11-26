@@ -71,6 +71,33 @@ test("标题 Logo：珠子真实撞钉、不穿钉、从底部出口回收", fun
   W.time = 1; logo:Render(VG); W.time = 1.016; logo:Render(VG)
 end)
 
+test("局内落点左右均衡（4 种钉阵）且无卡珠刷分", function()
+  local Run = require("Game/Run")
+  local Stage = require("Game/Stage")
+  for _, layout in ipairs(C.LAYOUTS) do
+    local left, right, worst = 0, 0, 0
+    for seed = 1, 12 do
+      local run = Run.new("tie", seed)
+      local info = run:CurrentStageInfo(); info.layout = layout
+      local st = Stage.new(run, info)
+      st:Launch()
+      local seen = {}
+      for _ = 1, 60 * 40 do
+        st:Update(1 / 60)
+        for _, b in ipairs(st.phys.balls) do
+          if not seen[b] and b.y > 260 then seen[b] = true; if b.x < 180 then left = left + 1 else right = right + 1 end end
+          if b.hits > worst then worst = b.hits end
+        end
+        if st.phase ~= "launch" then break end
+      end
+    end
+    local ratio = right / (left + right)
+    log(string.format("     %-7s 右侧占比 %.0f%%  单珠最多命中 %d", layout, ratio * 100, worst))
+    assert(ratio > 0.40 and ratio < 0.60, layout .. " 左右失衡")
+    assert(worst < 300, layout .. " 有珠子卡住刷分")
+  end
+end)
+
 log("== 2. 完整流程 ==")
 local App = require("UIx/App")
 local Save = require("Game/Save")

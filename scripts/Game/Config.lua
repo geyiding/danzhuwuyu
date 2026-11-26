@@ -41,10 +41,13 @@ C.PHYS = {
     ballBallRest = 0.6,
     railSpeed = 1500,       -- 轨道上行速度 BU/s
     fireInterval = 0.075,   -- 连发间隔
-    releaseSpeedMin = 260,
-    releaseSpeedMax = 470,
-    releaseAngleMin = 206,  -- 度（y 向下坐标系，180=左 270=上 360=右）
-    releaseAngleMax = 322,
+    -- 出射：每颗珠先随机一个"天意落点" x（左右均匀），再反推它在顶部轨道上的脱轨角度；
+    -- 脱轨后沿切线只带小速度 + 随机横向扰动，让重力主导下落，避免全部贴弧冲向右侧
+    releaseXMin = 46,
+    releaseXMax = 314,
+    releaseSpeedMin = 0,
+    releaseSpeedMax = 40,
+    releaseJitterX = 55,    -- 脱轨瞬间横向随机速度 ±
     maxBallLife = 22,       -- 超时强制回收
     maxBalls = 220,
 }
@@ -54,7 +57,8 @@ C.PHYS = {
 -- ---------------------------------------------------------------------------
 C.SCORE = {
     baseMult = 1,
-    hitCooldown = 0.12,
+    hitCooldown = 0.12,     -- 同一颗珠对同一颗钉的计分冷却
+    minImpact = 20,         -- 低于此冲击速度（静止贴钉）不计分
 }
 
 -- 钉子类型。count = 每发默认数量（从普通钉中随机替换）。
@@ -162,7 +166,7 @@ C.MOD_ORDER = { "mag", "launch", "redpeg", "goldpeg", "purppeg", "bombpeg", "spl
 -- ---------------------------------------------------------------------------
 -- 关卡：8 层（Ante）× 3 台（小台 / 大台 / 头目台）
 -- ---------------------------------------------------------------------------
-C.ANTE_TARGETS = { 6000, 14000, 36000, 85000, 190000, 400000, 850000, 1800000 }
+C.ANTE_TARGETS = { 11000, 30000, 75000, 190000, 380000, 800000, 1800000, 4000000 }
 C.STAGE_KINDS = {
     { key = "small", name = "小台",   mul = 1.0, reward = 3 },
     { key = "big",   name = "大台",   mul = 1.5, reward = 4 },

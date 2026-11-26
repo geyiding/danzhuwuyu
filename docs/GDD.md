@@ -175,10 +175,13 @@
 ### 4.5 发射
 
 - 每台 3 次发射（改造/护符可加）。一发 = 从珠袋抽出一个**弹匣**（默认 10 颗）依次射出，间隔 0.075s。
-- 每颗珠的**出射角度与速度随机**（角度 206°–322°，速度 260–470），落点覆盖整个顶部 → 天意。
+- 每颗珠先随机一个**天意落点 x**（46–314，左右均匀），再反推它在顶部轨道上的脱轨角度；脱轨时只带很小的切线速度（0–40）和 ±55 的横向扰动，让重力主导下落 → 天意。
+  > 教训：最初按"随机脱轨角 + 大切线速度（260–470）"出射，珠子全部顺时针贴着圆弧冲向右侧，**实测 97% 落在右半边**。修正后 4 种钉阵中场左右比都在 47%–56%。
+- 钉阵以中线**左右对称**生成（两侧边道等宽）；离启动口沿钉/命钉太近、会形成"珠子穿不过去的 V 形夹缝"的普通钉一律删除。
 - 撞钉反弹带 ±0.1 弧度随机偏转（`PHYS.jitter`），打破"停在钉顶"的同时制造可见的随机。
 - 底部**回收口**：珠子重新射入一次（回旋镖护符：3 次）。
 - 超过 22 秒仍未落袋 / 飞出盘面的珠子强制回收（"噗"）。
+- **防卡珠 / 防刷分**：① 每 0.5 秒检查位移，几乎没动就往中线弹开，连续 6 次救不出直接回收；② 冲击速度 < 20 的"静止贴钉"不计分；③ 计分冷却按"每颗钉"单独计时（防止珠子卡在两颗钉之间交替刷分）。
 
 ### 4.6 计分
 
@@ -221,7 +224,7 @@
 
 ### 5.2 数字膨胀曲线
 
-- 第 1 层单发 ~1.7 万，第 8 层中位 ~115 万，顶级构筑单发可达**数千万到数亿**（模拟器实测最大 5200 万）。
+- 第 1 层单发中位 ~2.4 万，第 8 层中位 ~153 万，顶级构筑单发可达**数千万到数亿**（模拟器实测最大 3880 万）。
 - 显示统一走 `Skin.Num`：`≥1万 → 1.75万`，`≥10万 → 17.5万`，`≥1亿 → 1.23亿`，`≥1万亿 → 1.2万亿`，窄标签永不溢出。
 
 ### 5.3 "天意"与"奇迹"
@@ -329,14 +332,14 @@
 
 | 层 | 小台（×1） | 大台（×1.5） | 头目台（×2） |
 |---|---|---|---|
-| 1 | 6,000 | 9,000 | 12,000 |
-| 2 | 14,000 | 21,000 | 28,000 |
-| 3 | 36,000 | 54,000 | 72,000 |
-| 4 | 85,000 | 127,500 | 170,000 |
-| 5 | 190,000 | 285,000 | 380,000 |
-| 6 | 400,000 | 600,000 | 800,000 |
-| 7 | 850,000 | 1,275,000 | 1,700,000 |
-| 8 | 1,800,000 | 2,700,000 | 3,600,000 |
+| 1 | 11,000 | 16,500 | 22,000 |
+| 2 | 30,000 | 45,000 | 60,000 |
+| 3 | 75,000 | 112,500 | 150,000 |
+| 4 | 190,000 | 285,000 | 380,000 |
+| 5 | 380,000 | 570,000 | 760,000 |
+| 6 | 800,000 | 1,200,000 | 1,600,000 |
+| 7 | 1,800,000 | 2,700,000 | 3,600,000 |
+| 8 | 4,000,000 | 6,000,000 | 8,000,000 |
 
 ### 7.2 头目规则（Demo 7 个，第 1 层只抽温和规则）
 
@@ -386,28 +389,29 @@
 | 大当率 / 777 占比 / 听牌落空 | 16% / 25% / 32% | |
 | FEVER | 7s（777 10s），珠雨 10（18），钉分 ×3 | |
 
-### 9.2 模拟校准（`tests/sim_balance.lua`，贪心 AI，60 局）
+### 9.2 模拟校准（`tests/sim_balance.lua`，贪心 AI，100 局）
 
-| 层 | 目标 | 单发 p25 | 单发中位 | 单发 p75 | 止步于此 |
+| 层 | 小台目标 | 单发 p25 | 单发中位 | 单发 p75 | 止步于此 |
 |---|---|---|---|---|---|
-| 1 | 6,000 | 7,860 | 17,510 | 12.2 万 | 1 |
-| 2 | 14,000 | 15,062 | 31,104 | 9.1 万 | 7 |
-| 3 | 36,000 | 30,932 | 61,992 | 12.0 万 | 4 |
-| 4 | 85,000 | 47,742 | 10.3 万 | 31.6 万 | 9 |
-| 5 | 190,000 | 10.1 万 | 24.1 万 | 76.0 万 | 7 |
-| 6 | 400,000 | 15.3 万 | 29.5 万 | 84.5 万 | 11 |
-| 7 | 850,000 | 27.5 万 | 47.6 万 | 175.7 万 | 8 |
-| 8 | 1,800,000 | 56.5 万 | 114.8 万 | 299.0 万 | 13（含 3 次通关） |
+| 1 | 11,000 | 15,742 | 23,610 | 36,700 | 0 |
+| 2 | 30,000 | 32,718 | 54,831 | 94,256 | 7 |
+| 3 | 75,000 | 72,267 | 12.5 万 | 22.4 万 | 5 |
+| 4 | 190,000 | 12.1 万 | 18.9 万 | 36.8 万 | 16 |
+| 5 | 380,000 | 20.4 万 | 33.4 万 | 59.5 万 | 13 |
+| 6 | 800,000 | 31.9 万 | 53.4 万 | 107.5 万 | 20 |
+| 7 | 1,800,000 | 53.7 万 | 88.4 万 | 170.9 万 | 17 |
+| 8 | 4,000,000 | 91.3 万 | 153.2 万 | 329.2 万 | 22（含 12 次通关） |
 
-- 单台平均时长 **36 秒**（含 FEVER）。
-- 贪心 AI 通关率 5%：人类玩家有流派意识后预期 30–50%（与小丑牌白注相近），后续由难度星拉开上限。
-- **第 1 层几乎不会失败**（60 局仅 1 次），满足"前 3 关基本不会失败"。
+- 单台平均时长 **43 秒**（含 FEVER）。
+- 贪心 AI 通关率 **12%**：人类玩家有流派意识后预期 30–50%（与小丑牌白注相近），后续由难度星拉开上限。
+- **第 1 层 100 局 0 次失败**，满足"前 3 关基本不会失败"。
 
 ### 9.3 调参守则
 
-1. 改任何数值后跑 `lua5.4 tests/sim_balance.lua 60`，对照上表：第 1 层止步 ≤ 2/60；贪心 AI 通关 3%–15%。
+1. 改任何数值后跑 `lua5.4 tests/sim_balance.lua 100`，对照上表：第 1 层止步 ≤ 2/100；贪心 AI 通关 3%–15%。
 2. **乘法倍率要稀缺**：每发可触发的 ×倍率来源 ≤ 3 个（紫钉、777、护符）。早期版本把中央口袋设成"每颗珠 ×2"，结果单发 1900 亿 —— 已改为 +3。
 3. 新护符若是"每颗珠/每次命中 ×N"，必须加"每发一次"限制（参考连击鬼）。
+4. **改钉阵 / 出射 / 物理参数后必须跑 `tests/test_all.lua`**：其中「局内落点左右均衡且无卡珠刷分」会检查 4 种钉阵的左右比（40%–60%）与单珠命中上限（< 300）。历史上出现过两次卡珠刷分（墙边补钉夹缝 7159 次、命钉夹缝 300+ 次），都会让数值模拟严重失真。
 
 ---
 
@@ -851,11 +855,107 @@ Game title logotype of the four Chinese characters "弹珠物语", Japanese neon
 ```
 > Logo 是唯一允许出现文字的素材；若模型写错字，改用程序/设计软件排字，仅生成装饰底板。
 
-#### UI 套件底框（单张，`assets/Textures/ui/kit.png`，九宫格切片）
+#### UI 控件合图（替换当前默认蓝色按钮 / 纯色面板）
+
+三张合图覆盖全部界面控件。底框类素材按**九宫格拉伸（9-slice）**设计：圆角方块 tile、四边等宽边框、中心大面积干净纯色，装饰只放在四角与边框内。生成 1:1 用 `1024×1024`，3:2 用 `1536×1024`，纯白底，切图时由程序去底并设置九宫格切线。
+
+**合图 UI-A · 控件底框（9 件 → 1:1 3×3）**
+
+中文：
 ```
-游戏 UI 套件设计稿，纯白背景上整齐排列：1 个深紫半透明圆角面板（金色细边 + 底部加厚边）、1 个品红主按钮（立体厚底）、1 个深紫次按钮、1 个金色价签胶囊、1 个护符空槽（虚线圆角框），日式霓虹街机风，扁平 + 轻立体，边角适合九宫格拉伸，no text, no icons, no numbers.
-Game UI kit sheet on a pure white background, neatly arranged: one dark purple translucent rounded panel (thin gold border, thicker bottom edge), one magenta primary button with thick 3D base, one dark purple secondary button, one gold price-tag pill, one empty charm slot (dashed rounded frame), Japanese neon arcade style, flat with light 3D, corners suitable for 9-slice stretching, no text, no icons, no numbers.
+1:1 正方形画布，3×3 规整九宫格排列 9 个手机游戏 UI 底框素材，用于九宫格拉伸（9-slice），正面平视无透视，日式霓虹街机 × 和风祭典 × 糖果玩具质感，2.5D 轻厚涂，赛璐璐硬高光，深紫色(#2A1240) 3px 外描边。
+每个素材都是圆角方块 tile：四角装饰、四边等宽边框、中间大面积为干净的纯色或极简渐变（便于拉伸），装饰只放在四角与边框上，不得占用中心区域。
+第1行：①主按钮：品红(#FF4FA3)到亮粉渐变，顶部一条白色高光带，底部加厚的深品红立体厚底，像糖果按键；②次按钮：深紫(#3A2466)渐变，淡紫细描边，底部加厚深紫厚底；③危险按钮：朱红(#FF4658)渐变，底部深红厚底。
+第2行：④弹窗大框：深夜紫(#1A0B2E)面板，金色(#FFC23C)细双线边框，四角和风祥云金饰，底边加厚；⑤次级面板：比④更暗更简洁的深紫底板，淡紫细边，小圆角；⑥商品格子（普通）：深紫底，紫色细边，内侧微弱暗角。
+第3行：⑦商品格子（选中）：同⑥但边框换成发光的金色粗描边并带外发光；⑧护符空槽：半透明黑紫底，虚线圆角内框；⑨胶囊底：金色描边的深色胶囊形 tile，用作金币/价签底。
+严格按行列定格摆放，从第一行左到右逐一绘制指定主体，不得乱排或漏画；每个主体居中独立、占单格约 72%–78%，四周留足均匀白边，彼此不重叠、不跨格；
+no grid lines, no dividing boxes, no borders, no frames around cells, pure flat solid white background (#FFFFFF), no drop shadow, no cast shadow, no text, no numbers.
 ```
+English：
+```
+1:1 square canvas, a clean 3x3 grid of 9 mobile game UI frame assets designed for 9-slice stretching, flat front view with no perspective, Japanese neon arcade x festival matsuri x candy-toy material, 2.5D light painterly, crisp cel highlights, 3px dark purple (#2A1240) outline.
+Every asset is a rounded-square tile: decorated corners, equal-width borders on all four sides, and a large clean center of flat color or a very subtle gradient so it can stretch; decorations only on corners and borders, never in the center.
+Row 1: (1) primary button: magenta (#FF4FA3) to bright pink gradient, white highlight band on top, thick deep-magenta 3D base at the bottom like a candy key; (2) secondary button: deep purple (#3A2466) gradient, thin lavender outline, thick dark purple base; (3) danger button: vermilion (#FF4658) gradient with a thick dark red base.
+Row 2: (4) large dialog frame: midnight purple (#1A0B2E) panel, thin gold (#FFC23C) double-line border, golden auspicious-cloud ornaments on the four corners, thicker bottom edge; (5) secondary panel: darker and simpler purple plate with thin lavender border and small corner radius; (6) item card (normal): dark purple fill, thin purple border, faint inner vignette.
+Row 3: (7) item card (selected): same as (6) but with a thick glowing gold border and outer glow; (8) empty charm slot: translucent black-purple fill with a dashed rounded inner frame; (9) pill base: dark capsule-shaped tile with gold outline, used behind coin counters and price tags.
+Strictly place by rows and columns, drawing each specified subject from left to right starting at row 1, no random arrangement or omissions; each subject centered and isolated, filling about 72-78% of its cell with even white margins, no overlap, no crossing cells;
+no grid lines, no dividing boxes, no borders, no frames around cells, pure flat solid white background (#FFFFFF), no drop shadow, no cast shadow, no text, no numbers.
+```
+
+| 格位 | 文件 | 用途 |
+|---|---|---|
+| 第1行第1格 | `assets/Textures/ui/btn_primary.png` | 开局 / 出发 / 购买 等主按钮 |
+| 第1行第2格 | `assets/Textures/ui/btn_secondary.png` | 图鉴 / 珠袋 / 刷新 等次按钮 |
+| 第1行第3格 | `assets/Textures/ui/btn_danger.png` | 卖出 / 放弃 |
+| 第2行第1格 | `assets/Textures/ui/dialog.png` | 所有弹窗卡体 |
+| 第2行第2格 | `assets/Textures/ui/panel.png` | 分数板、详情区、顶栏底 |
+| 第2行第3格 | `assets/Textures/ui/card.png` | 商店 / 珠袋 / 图鉴格子 |
+| 第3行第1格 | `assets/Textures/ui/card_selected.png` | 选中格子 |
+| 第3行第2格 | `assets/Textures/ui/slot_empty.png` | 护符空槽 |
+| 第3行第3格 | `assets/Textures/ui/pill.png` | 金币 / 价签胶囊 |
+
+**合图 UI-B · HUD 小图标（9 件 → 1:1 3×3）**
+
+中文：
+```
+1:1 正方形画布，3×3 规整九宫格排列 9 个手机游戏 HUD 按钮图标，日式霓虹街机 × 糖果玩具质感，2.5D 半厚涂，赛璐璐硬高光，深紫色(#2A1240) 3px 外描边，小尺寸（32px）依然清晰。
+第1行：①设置：圆形深紫底座上一个银色齿轮；②关闭：圆形深紫底座上一个白色粗圆角叉号；③主页：圆形深紫底座上一座金色小房子。
+第2行：④珠袋：棕色布袋口敞开，露出三颗银色弹珠；⑤倍速：两个并排向右的品红色粗箭头；⑥发射灯（亮）：金色发光圆形灯泡，外圈暖光。
+第3行：⑦发射灯（灭）：同⑥造型但暗灰色无光；⑧刷新：两个首尾相接的青色环形箭头；⑨乘号徽章：金色立体粗乘号"×"形状的小徽章（纯图形）。
+严格按行列定格摆放，从第一行左到右逐一绘制指定主体，不得乱排或漏画；每个主体居中独立、占单格约 72%–78%，四周留足均匀白边，彼此不重叠、不跨格；
+no grid lines, no dividing boxes, no borders, no frames around cells, pure flat solid white background (#FFFFFF), no drop shadow, no cast shadow, no text, no numbers.
+```
+English：
+```
+1:1 square canvas, a clean 3x3 grid of 9 mobile game HUD button icons, Japanese neon arcade x candy-toy material, 2.5D semi-painterly, crisp cel highlights, 3px dark purple (#2A1240) outline, still readable at 32px.
+Row 1: (1) settings: a silver gear on a round deep purple base; (2) close: a bold white rounded X on a round deep purple base; (3) home: a small golden house on a round deep purple base.
+Row 2: (4) marble bag: an open brown cloth pouch with three silver marbles peeking out; (5) speed-up: two bold magenta arrows pointing right side by side; (6) launch lamp (on): a glowing golden round bulb with a warm halo.
+Row 3: (7) launch lamp (off): same shape as (6) but dull grey and unlit; (8) refresh: two cyan circular arrows chasing each other; (9) multiply badge: a small golden 3D bold multiplication-cross shaped emblem (graphic only).
+Strictly place by rows and columns, drawing each specified subject from left to right starting at row 1, no random arrangement or omissions; each subject centered and isolated, filling about 72-78% of its cell with even white margins, no overlap, no crossing cells;
+no grid lines, no dividing boxes, no borders, no frames around cells, pure flat solid white background (#FFFFFF), no drop shadow, no cast shadow, no text, no numbers.
+```
+
+| 格位 | 文件 |
+|---|---|
+| 第1行第1格 | `assets/Textures/ui/icon_settings.png` |
+| 第1行第2格 | `assets/Textures/ui/icon_close.png` |
+| 第1行第3格 | `assets/Textures/ui/icon_home.png` |
+| 第2行第1格 | `assets/Textures/ui/icon_bag.png` |
+| 第2行第2格 | `assets/Textures/ui/icon_speed.png` |
+| 第2行第3格 | `assets/Textures/ui/lamp_on.png` |
+| 第3行第1格 | `assets/Textures/ui/lamp_off.png` |
+| 第3行第2格 | `assets/Textures/ui/icon_refresh.png` |
+| 第3行第3格 | `assets/Textures/ui/icon_times.png` |
+
+**合图 UI-C · 局内核心控件（6 件 → 3:2 横版 3×2）**
+
+中文：
+```
+3:2 横版画布，3 列 × 2 行规整排列 6 个等大正方形格子的手机弹珠游戏核心控件素材，正面平视无透视，日式霓虹街机 × 柏青哥机台 × 糖果玩具质感，2.5D 轻厚涂，赛璐璐硬高光，深紫色(#2A1240) 3px 外描边。①–⑤ 为可九宫格拉伸的圆角方块 tile，中心区域干净纯色。
+第1行：①发射大按钮（常态）：品红到橙色渐变，边框嵌一圈金色小灯泡点阵（像柏青哥机台按钮），顶部白色高光，底部加厚立体厚底；②发射大按钮（按下）：同①但整体下沉、厚底变薄、颜色更亮、灯泡全亮；③发射大按钮（禁用）：同①造型去饱和成灰紫色，灯泡熄灭。
+第2行：④珠分框：电光蓝(#46AAFF)发光圆角 tile，内阴影，细白描边；⑤倍率框：倍率红(#FF4658)发光圆角 tile，内阴影，细白描边；⑥火焰条：一排横向并列的橙黄卡通火苗，底边平直，可左右平铺。
+严格按行列定格摆放，从第一行左到右逐一绘制指定主体，不得乱排或漏画；每个主体居中独立、占单格约 72%–78%，四周留足均匀白边，彼此不重叠、不跨格；
+no grid lines, no dividing boxes, no borders, no frames around cells, pure flat solid white background (#FFFFFF), no drop shadow, no cast shadow, no text, no numbers.
+```
+English：
+```
+3:2 landscape canvas, a 3-column by 2-row grid of 6 equal square cells containing core in-game controls for a mobile pachinko game, flat front view with no perspective, Japanese neon arcade x pachinko cabinet x candy-toy material, 2.5D light painterly, crisp cel highlights, 3px dark purple (#2A1240) outline. Items 1-5 are rounded-square tiles for 9-slice stretching with a clean flat-color center.
+Row 1: (1) big launch button (normal): magenta to orange gradient, border studded with a ring of tiny golden light bulbs like a pachinko cabinet button, white highlight on top, thick 3D base; (2) big launch button (pressed): same as (1) but sunk down, thinner base, brighter colors, all bulbs lit; (3) big launch button (disabled): same shape as (1) desaturated to grey-purple, bulbs off.
+Row 2: (4) chips box: glowing electric blue (#46AAFF) rounded tile with inner shadow and thin white outline; (5) mult box: glowing red (#FF4658) rounded tile with inner shadow and thin white outline; (6) flame strip: a horizontal row of orange-yellow cartoon flames with a flat bottom edge, tileable left to right.
+Strictly place by rows and columns, drawing each specified subject from left to right starting at row 1, no random arrangement or omissions; each subject centered and isolated, filling about 72-78% of its cell with even white margins, no overlap, no crossing cells;
+no grid lines, no dividing boxes, no borders, no frames around cells, pure flat solid white background (#FFFFFF), no drop shadow, no cast shadow, no text, no numbers.
+```
+
+| 格位 | 文件 |
+|---|---|
+| 第1行第1格 | `assets/Textures/ui/launch_normal.png` |
+| 第1行第2格 | `assets/Textures/ui/launch_pressed.png` |
+| 第1行第3格 | `assets/Textures/ui/launch_disabled.png` |
+| 第2行第1格 | `assets/Textures/ui/box_chips.png` |
+| 第2行第2格 | `assets/Textures/ui/box_mult.png` |
+| 第2行第3格 | `assets/Textures/ui/flame_strip.png` |
+
+> UI 文字（按钮字、数字）始终由程序绘制，素材里一律不出现文字。接入方式：底框用 `backgroundImage + backgroundFit = "sliced" + backgroundSlice`，图标走 `ArtIcon`。
 
 ---
 
@@ -938,8 +1038,8 @@ UI 渲染 → BoardView:Render(nvg) 读 Stage/FX 状态绘制（逻辑与表现�
 
 | 命令 | 内容 |
 |---|---|
-| `lua5.4 tests/test_all.lua` | 10 项：全图标绘制、完整一局（每 3 帧渲染整棵 UI 树，约 570 万次严格 NanoVG 调用）、弹窗、极值态（1.2e13 珠分、777、听牌、头目）、存档往返、云领先/失败/超时 |
-| `lua5.4 tests/sim_balance.lua 60` | 60 局数值模拟 |
+| `lua5.4 tests/test_all.lua` | 12 项：全图标绘制、标题 Logo 物理、局内左右均衡与防卡珠、完整一局（每 3 帧渲染整棵 UI 树，约 570 万次严格 NanoVG 调用）、弹窗、极值态（1.2e13 珠分、777、听牌、头目）、存档往返、云领先/失败/超时 |
+| `lua5.4 tests/sim_balance.lua 100` | 100 局数值模拟 |
 | `TEST_VERBOSE=1 ...` | 打开游戏内日志 |
 
 > 测试桩严格模式：NanoVG 参数出现 nil/NaN/越界颜色立即报错；UI 桩只允许文档中出现的控件方法，调用未知方法即报错。

@@ -15,7 +15,7 @@ local function inBlocked(x, y)
     -- 顶部圆弧之外
     local dx, dy = x - B.arcCx, y - B.arcCy
     if y < B.arcCy and dx * dx + dy * dy > (B.arcR - 22) ^ 2 then return true end
-    if x < B.wallL + 10 or x > B.wallR - 10 then return true end
+    if x < B.wallL + 9 or x > B.wallR - 9 then return true end
     -- 液晶周围
     local L = B.lcd
     if x > L.x - 16 and x < L.x + L.w + 16 and y > L.y - 16 and y < L.y + L.h + 18 then return true end
@@ -26,37 +26,38 @@ local function inBlocked(x, y)
 end
 
 --- 生成钉位
+--- 生成钉位：以中线 x=arcCx 左右对称排布（两侧边道等宽，避免一侧多出直落通道）
+--- 注意：不要在墙边补钉——贴墙钉与相邻钉会形成 V 形夹缝卡珠（曾单珠 22 秒刷 7000+ 次命中）
 local function genPegPositions(layout, rng)
     local pts = {}
     local sx, sy = 28, 25
+    local cx = B.arcCx
     local rows = floor((B.fieldBottom - 120) / sy)
     local y0 = 120
+    local half = floor((B.wallR - B.wallL) / 2 / sx) + 1
     for row = 0, rows do
         local y = y0 + row * sy
         local off = (row % 2 == 1) and sx / 2 or 0
         local wave = 0
         if layout == "waves" then wave = sin(row * 0.9) * 7 end
-        local x = B.wallL + 14 + off
-        local col = 0
-        while x <= B.wallR - 14 do
-            local px = x + wave
-            local keep = true
-            if layout == "diamond" then
-                -- 菱形空洞：在网格上挖出几块菱形
-                local cxs = { 96, 264, 180 }
+        for k = -half, half do
+            local px = cx + k * sx + off + wave
+            local col = math.abs(k + (off > 0 and 0.5 or 0))
+            local keep = px >= B.wallL + 12 and px <= B.wallR - 12
+            if keep and layout == "diamond" then
+                -- 菱形空洞（左右对称）
+                local cxs = { cx - 84, cx + 84, cx }
                 local cys = { 410, 410, 480 }
-                for k = 1, 3 do
-                    if abs(px - cxs[k]) / 30 + abs(y - cys[k]) / 22 < 1 then keep = false end
+                for q = 1, 3 do
+                    if abs(px - cxs[q]) / 30 + abs(y - cys[q]) / 22 < 1 then keep = false end
                 end
-            elseif layout == "lanes" then
-                -- 竖直通道：每 4 列抽掉 1 列（下半区）
-                if y > 360 and col % 4 == 2 then keep = false end
+            elseif keep and layout == "lanes" then
+                -- 竖直通道：下半区左右对称各抽掉一列
+                if y > 360 and floor(col + 0.5) % 4 == 2 then keep = false end
             end
             if keep and not inBlocked(px, y) then
                 pts[#pts + 1] = { px, y }
             end
-            x = x + sx
-            col = col + 1
         end
     end
     return pts
@@ -86,15 +87,23 @@ function Board:_build()
         return p
     end
 
-    for _, pt in ipairs(genPegPositions(self.layout, self.rng)) do addPeg(pt[1], pt[2]) end
-
-    -- 启动口沿钉（固定普通钉，不参与特殊化）
+    -- 启动口沿钉 + 命钉（漏斗）：固定普通钉，不参与特殊化
     local S = B.start
-    addPeg(S.x - S.rimGap, S.y - 2, { rim = true })
-    addPeg(S.x + S.rimGap, S.y - 2, { rim = true })
-    -- 命钉（漏斗）
-    addPeg(S.x - 16, S.y - 24, { rim = true })
-    addPeg(S.x + 16, S.y - 24, { rim = true })
+    local fixed = {
+        { S.x - S.rimGap, S.y - 2 }, { S.x + S.rimGap, S.y - 2 },
+        { S.x - 16, S.y - 24 }, { S.x + 16, S.y - 24 },
+    }
+    -- 防卡珠：两钉间隙 < 珠子直径时会形成 V 形夹缝（珠子静止卡住）。
+    -- 普通钉阵里离固定钉太近（中心距 < 2·钉半径 + 珠径 + 2）的一律删掉。
+    local minD = B.pegR * 2 + 12 + 2
+    for _, pt in ipairs(genPegPositions(self.layout, self.rng)) do
+        local ok = true
+        for _, f in ipairs(fixed) do
+            if (pt[1] - f[1]) ^ 2 + (pt[2] - f[2]) ^ 2 < minD * minD then ok = false; break end
+        end
+        if ok then addPeg(pt[1], pt[2]) end
+    end
+    for _, f in ipairs(fixed) do addPeg(f[1], f[2], { rim = true }) end
 
     -- 侧墙
     segs[#segs + 1] = { x1 = B.wallL, y1 = B.arcCy, x2 = B.wallL, y2 = B.floor, tag = "wall" }

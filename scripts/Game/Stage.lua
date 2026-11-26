@@ -177,11 +177,22 @@ function Stage:QueueRain(n)
     self.rainPending = self.rainPending + n
 end
 
+--- 天意落点 → 脱轨角度（度）。顶部圆弧 a∈[180°,360°]，x = cx + cos(a)·r
+local function releaseAngleForX(x)
+    local rr = B.arcR - 8
+    local c = (x - B.arcCx) / rr
+    if c < -0.98 then c = -0.98 elseif c > 0.98 then c = 0.98 end
+    return (2 * pi - math.acos(c)) * 180 / pi
+end
+Stage.ReleaseAngleForX = releaseAngleForX
+
 local function makeRailItem(self, kind, order, delay)
-    local ang = self.rng:range(P.releaseAngleMin, P.releaseAngleMax)
+    local tx = self.rng:range(P.releaseXMin, P.releaseXMax)
+    local ang = releaseAngleForX(tx)
     return {
         kind = kind, order = order, delay = delay, dist = 0, angle = ang,
         len = Board.RailLength(ang), speed = self.rng:range(P.releaseSpeedMin, P.releaseSpeedMax),
+        jx = self.rng:range(-P.releaseJitterX, P.releaseJitterX),
         x = B.railX, y = B.railBottom, recycles = 0,
     }
 end
@@ -237,9 +248,16 @@ function Stage:_onWall(ball, seg, impact)
     self.fx:Wall(ball, impact)
 end
 
+--- 防刷分：① 必须是真正"撞上"（冲击速度 > minImpact；穿透珠 impact=0 例外）
+---         ② 冷却按"每颗钉"单独计时（防止静止珠在两颗钉之间交替刷分）
 function Stage:_onPegContact(ball, peg, impact)
-    if ball.lastPeg == peg and (self.time - (ball.lastPegT or -1)) < C.SCORE.hitCooldown then return end
-    ball.lastPeg, ball.lastPegT = peg, self.time
+    if impact > 0 and impact < C.SCORE.minImpact then return end
+    local cd = ball.pegCd
+    if not cd then cd = {}; ball.pegCd = cd end
+    local last = cd[peg]
+    if last and (self.time - last) < C.SCORE.hitCooldown then return end
+    cd[peg] = self.time
+    ball.lastPeg = peg
     self:HitPeg(peg, ball)
 end
 
@@ -529,7 +547,8 @@ function Stage:_updateLaunch(dt)
             local rr = B.arcR - 8
             local bx, by = B.arcCx + cos(a) * rr, B.arcCy + sin(a) * rr
             local tx, ty = -sin(a), cos(a)
-            local b = self:SpawnBall(it.kind, bx, by, tx * it.speed, ty * it.speed, { launchOrder = it.order, child = it.child })
+            local b = self:SpawnBall(it.kind, bx, by, tx * it.speed + (it.jx or 0), ty * it.speed,
+                { launchOrder = it.order, child = it.child })
             if b then b.recycles = it.recycles end
         end
     end
@@ -570,8 +589,24 @@ function Stage:_updateLaunch(dt)
                 b.alive = false
                 self.fx:Popup(b.x, b.y, "噗", "dim")
             elseif b.alive then
-                -- 卡住检测
-                if b.vx * b.vx + b.vy * b.vy < 15 * 15 then
+                -- 卡住检测 ①：位移法——0.5 秒内几乎没动（含在夹缝里高速抖动刷分）→ 往中线弹开
+                b.anchorT = (b.anchorT or 0) + dt
+                if b.anchorT >= 0.5 then
+                    local ax, ay = b.anchorX or b.x, b.anchorY or b.y
+                    if (b.x - ax) ^ 2 + (b.y - ay) ^ 2 < 10 * 10 then
+                        local dir = (b.x < B.arcCx) and 1 or -1
+                        b.vx = dir * self.rng:range(140, 240)
+                        b.vy = -self.rng:range(80, 160)
+                        b.unsticks = (b.unsticks or 0) + 1
+                        if b.unsticks > 6 then
+                            b.alive = false   -- 实在救不出来：回收，防止无限刷分
+                            self.fx:Popup(b.x, b.y, "噗", "dim")
+                        end
+                    end
+                    b.anchorX, b.anchorY, b.anchorT = b.x, b.y, 0
+                end
+                -- 卡住检测 ②：速度法
+                if b.alive and b.vx * b.vx + b.vy * b.vy < 15 * 15 then
                     b.still = b.still + dt
                     if b.still > 1.0 then
                         b.vx, b.vy = self.rng:range(-120, 120), -80
