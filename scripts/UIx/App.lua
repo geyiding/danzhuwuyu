@@ -1038,6 +1038,11 @@ function App.SetPaused(p)
     App.paused = p
 end
 
+--- 设置弹窗打开时保持暂停（切后台回来不自动恢复）
+function App.IsMenuOpen()
+    return refs.dlgSettings ~= nil and refs.dlgSettings.isOpen == true
+end
+
 function App.OnFxEvent(name, a, b, c, d)
     if name == "charm" then
         PulseCharm(a)

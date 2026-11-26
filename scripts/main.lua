@@ -95,7 +95,7 @@ function HandleInputFocus(eventType, eventData)
         if App.audio then App.audio:Pause(true) end
         App.SaveLocal()
     else
-        App.SetPaused(false)
+        App.SetPaused(App.IsMenuOpen())
         if App.audio then App.audio:Pause(false) end
     end
 end
