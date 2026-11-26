@@ -68,3 +68,6 @@ CLAUDE.md
 /.opencode
 **/.pack-write-*
 /.cache/
+
+# Validation screenshots
+/screenshots/
