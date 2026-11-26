@@ -1,8 +1,15 @@
-# 弹珠物语（Marble Story）· 完整游戏方案 v0.1
+# 弹珠物语（Marble Story）· 完整游戏方案 v0.2
 
 > 手机竖屏 · 在线小游戏 · Roguelike 弹珠台构筑
 > 引擎：UrhoX（Lua 5.4 · urhox-libs/UI · NanoVG）
 > 本文档 + `scripts/` 下的可玩 Demo 共同构成交接包：**方案说清"做什么、为什么"，Demo 定死"手感、架构、规范"**。后续 AI / 开发者按第 17 章的落地指引扩展内容即可。
+
+### 版本记录
+
+| 版本 | 日期 | 内容 |
+|---|---|---|
+| v0.1 | 2026-11-26 | 首版方案 + 可玩 Demo |
+| v0.2 | 2026-11-26 | 修正出射（珠子不再全部落右侧）与两处卡珠刷分并重新校准数值；新增 UI 控件合图提示词；新增第 19–25 章：完整版内容规格、局外系统细则、新手引导、切图与接入规范、存档结构、开发任务清单、Demo 已知限制 |
 
 ---
 
@@ -27,7 +34,14 @@
 16. [Demo 现状与路线图](#16-demo-现状与路线图)
 17. [给后续 AI 的落地指引](#17-给后续-ai-的落地指引)
 18. [风险与对策](#18-风险与对策)
-19. [名词表](#19-名词表)
+19. [完整版内容规格（可直接实现）](#19-完整版内容规格可直接实现)
+20. [局外系统细则](#20-局外系统细则)
+21. [新手引导](#21-新手引导)
+22. [切图与 UI 贴图接入规范](#22-切图与-ui-贴图接入规范交给切图-ai--接入-ai)
+23. [存档数据结构](#23-存档数据结构version--1)
+24. [开发任务清单（Backlog）](#24-开发任务清单backlog)
+25. [Demo 已知限制与待真机验证项](#25-demo-已知限制与待真机验证项)
+- [附录 · 名词表](#附录--名词表)
 
 ---
 
@@ -39,7 +53,9 @@
 | 可玩 Demo | `scripts/` | 入口 `scripts/main.lua`，全部程序化美术，无需任何贴图/音频即可运行 |
 | 纯 Lua 冒烟测试 | `tests/test_all.lua` | `lua5.4 tests/test_all.lua`，严格 NanoVG/UI 桩，覆盖完整流程与极值态 |
 | 数值模拟器 | `tests/sim_balance.lua` | `lua5.4 tests/sim_balance.lua 60`，贪心 AI 跑整局，校准目标分 |
-| 贴图替换提示词 | 本文第 11 章 | 宣发三件套 + 8 张局内合图 + 单张大图提示词，含格位→文件名映射 |
+| 贴图替换提示词 | 本文第 11 章 | 宣发三件套 + 8 张局内合图 + 3 张 UI 控件合图 + 单张大图提示词，含格位→文件名映射 |
+| 切图与接入规范 | 本文第 22 章 | 给切图 AI 与接入 AI 的交接标准（去底、尺寸、九宫格切线 `slices.json`） |
+| 开发任务清单 | 本文第 24 章 | 20 个任务，带优先级、依赖与验收标准 |
 
 ---
 
@@ -353,7 +369,7 @@
 | 锁链 | 红钉无效 | |
 | 窄门 | 底部 +3 倍率口袋失效 | ✓ |
 
-**规划新增**：镜像（钉阵左右翻转且特殊钉减少）、漏斗（口袋只剩 5 个）、冰冻（特殊钉需命中两次）、饥饿（每发吃掉 2 颗珠）、静电（珠子互相排斥）、黑幕（液晶关闭，结果最后才揭晓）、倒计时（每发限 8 秒，超时珠子消失）、天平（倍率上限 50）。**终局头目 8-3「弹珠之王」**：双液晶双启动口，每 3 秒随机切换一条头目规则。
+**规划新增**：镜像、漏斗、冰冻、饥饿、静电、黑幕、倒计时、天平（规则与实现见 19.4）。**终局头目 8-3「弹珠之王」**：双液晶双启动口，每 3 秒随机切换一条头目规则。
 
 ### 7.3 台面主题
 
@@ -1079,7 +1095,7 @@ UI 渲染 → BoardView:Render(nvg) 读 Stage/FX 状态绘制（逻辑与表现�
 - 全部程序化美术 + 贴图自动替换钩子；音频钩子。
 - 纯 Lua 测试与数值模拟。
 
-### 16.2 路线图
+### 16.2 路线图（任务拆解见第 24 章）
 
 | 里程碑 | 内容 | 验收 |
 |---|---|---|
@@ -1114,7 +1130,7 @@ UI 渲染 → BoardView:Render(nvg) 读 Stage/FX 状态绘制（逻辑与表现�
 `Config.PEGS` + `PEG_ORDER`；`Stage:HitPeg` 增加分支；`Art.Peg` 增加绘制；`FX.PEG_COL` 增加颜色。
 
 ### 17.5 接入贴图
-放 PNG 到 `assets/Textures/<目录>/<id>.png` 即自动生效（见 11.2）。`boss/ui/boards` 目录尚未在绘制代码里调用，需要在对应位置调用 `Art.TryImage(vg, "boss:<id>")`。
+放 PNG 到 `assets/Textures/<目录>/<id>.png` 即自动生效（见 11.2）；切图与 UI 底框接入按第 22 章执行。`boss/ui/boards` 目录尚未在绘制代码里调用，需要在对应位置调用 `Art.TryImage(vg, "boss:<id>")`。
 
 ### 17.6 禁止事项
 - 不在 `onClick / Update / refresh` 里重建控件；不在每帧分配表或拼字符串。
@@ -1135,7 +1151,302 @@ UI 渲染 → BoardView:Render(nvg) 读 Stage/FX 状态绘制（逻辑与表现�
 
 ---
 
-## 19. 名词表
+## 19. 完整版内容规格（可直接实现）
+
+> 本章是第 6–8 章"规划内容"的**实现规格**：每条都给出数值、触发钩子与改动位置。数值为初值，实现后必须跑 `tests/sim_balance.lua 100` 回归（见 9.3）。
+
+### 19.1 需要先补的框架能力（实现下列内容的前置）
+
+| 能力 | 位置 | 说明 | 被谁依赖 |
+|---|---|---|---|
+| `Stage:Delay(t, fn)` | Stage | 延时回调队列（按局内时间推进，受慢动作影响） | 双响炮、陀螺珠 |
+| 护符实例数据 `run.charmData[id]` | Run（随存档序列化） | 每个护符可存自己的计数/金额 | 储钱罐、打铁匠 |
+| 钩子 `onStageFail(st)` → 返回 `true` 取消失败 | Stage `_finishSettle` | 失败前询问护符 | 招福达摩 |
+| 钩子 `onStageClear(st)` | Stage | 过关时 | 打铁匠 |
+| 钩子 `onBallUpdate(st, ball, dt)` | Stage 珠子循环 | 每颗珠每帧（**禁止分配表**） | 磁铁、磁珠 |
+| `stats.holdMax` / `stats.slotSymbols` / `stats.ballBallRest` / `stats.multCap` | Stage 静态参数 | 取代直接读 `C.SLOT.maxHold` 等常量 | 双倍保留、老千骰子、静电、天平 |
+| `Run:PriceOf(item)` | Run 商店 | 统一计价入口（折扣/涨价） | 狐狸面具、难度星 |
+| 护符派发支持"复制" | `Stage:_hook` | 复制猫调用右侧护符的同名钩子 | 复制猫 |
+
+### 19.2 新增珠子（9 种 → 总计 18）
+
+| id | 名称 | 价格 | 稀有 | 效果（描述 ≤20 字） | 参数 | 实现位置 |
+|---|---|---|---|---|---|---|
+| `ice` | 冰珠 | 6 | 稀 | 特殊钉被它撞后不熄灭一次 | — | `HitPeg` 熄灭分支：`peg.frozenUsed` |
+| `magnet` | 磁珠 | 5 | 普 | 被 60 内的金钉吸引 | 引力 300 | `onBallUpdate` |
+| `top` | 陀螺珠 | 6 | 稀 | 撞钉后贴钉连撞 3 次 | 间隔 0.1s | `Delay` + `HitPeg` |
+| `seed` | 种子珠 | 5 | 普 | 落袋处上方长出 1 颗金钉 | 本台有效 | `_onPocket` → `Board:AddPeg` |
+| `bombb` | 炸弹珠 | 6 | 稀 | 落袋时爆炸 | 半径 60 | `_onPocket` → `Explode` |
+| `mirror` | 镜面珠 | 7 | 传 | 撞普通钉 25% 复制上次特殊钉 | — | `HitPeg` 记录 `st.lastSpecial` |
+| `purse` | 钱袋珠 | 4 | 普 | 每次命中 8% 掉 $1 | 每发上限 $3 | `HitPeg` 珠子特性段 |
+| `thunder` | 雷珠 | 7 | 稀 | 每 10 次命中劈一道闪电 | 同列 x±10 全触发 | `HitPeg` + `Physics:QueryPegs` |
+| `comet` | 彗星珠 | 6 | 稀 | 极速，路径上的钉都算命中 | 速度 ×2，重力 ×0.6 | `SpawnBall` 设 `gravityMul`；`ghost` 0.3s |
+
+### 19.3 新增护符（24 个 → 总计 40）
+
+| id | 名称 | 价格 | 稀有 | 描述（≤20 字） | 钩子 / 实现 |
+|---|---|---|---|---|---|
+| `magnet` | 磁铁 | 5 | 普 | 所有珠子被金钉轻微吸引 | `onBallUpdate`：半径 50，引力 200 |
+| `double` | 双响炮 | 7 | 稀 | 炸弹钉 0.3 秒后再爆一次 | `onPegHit`(bomb) → `Delay(0.3, Explode)` |
+| `thunder` | 雷神 | 7 | 稀 | 每发每 50 次命中劈闪电 | `onPegHit` 计 `st.result.hits % 50` |
+| `dice` | 老千骰子 | 6 | 稀 | 老虎机符号少一种 | `stats.slotSymbols = 4` |
+| `daruma` | 招福达摩 | 8 | 传 | 失败时多给 1 发，然后碎裂 | `onStageFail`：`launchesLeft = 1`，移除自身 |
+| `piggy` | 储钱罐 | 4 | 普 | 每发存 $1，卖出全拿 | `onLaunchEnd` 累加 `charmData.piggy`；`SellPrice` 加上 |
+| `ripple` | 涟漪 | 6 | 稀 | 普通钉 20% 连带邻钉 | `onPegHit`：`QueryPegs` 半径 30 取 1 颗 |
+| `blackhole` | 黑洞 | 8 | 传 | +3 口袋吸珠，每颗 +1 倍率 | `onBallUpdate`：口袋上方 50 内吸引 |
+| `sakura` | 樱吹雪 | 5 | 普 | FEVER 中花瓣每片 +5 珠分 | `onFever` 启动定时；FX 花瓣粒子 |
+| `fudo` | 不动明王 | 6 | 稀 | 弹力柱命中 ×1.1 倍率 | `onPegHit`(bumper)，每发上限 ×3 |
+| `smith` | 打铁匠 | 5 | 普 | 每过一台钢珠命中 +1 珠分 | `onStageClear` 累加；`HitPeg` 读取 |
+| `gambler` | 赌徒 | 6 | 稀 | 结算倍率 ×2，弹匣 -3 | `stats.magazine -= 3`；`onLaunchEnd` ×2 |
+| `echo` | 回声 | 6 | 稀 | 每发最后一颗珠重发一次 | `_onPocket` 时若轨道/场上无其他珠 → 再入轨 |
+| `neon` | 霓虹招牌 | 5 | 普 | 每个护符结算 +2 倍率 | `onLaunchEnd`：`#run.charms × 2` |
+| `toad` | 金蟾 | 7 | 稀 | 每 $10 存款结算 ×1.1 | `onLaunchEnd`，上限 ×2 |
+| `firework` | 爆竹王 | 8 | 传 | 所有珠首撞小爆炸 | `onPegHit`：`ball.hits == 1` → `Explode(r=30)` |
+| `hold2` | 双倍保留 | 5 | 普 | 保留上限 4 → 8 | `stats.holdMax = 8`（液晶画 8 盏灯） |
+| `rigged` | 确率机 | 7 | 稀 | 听牌落空 50% 改判大当 | `_startSpin` 结果生成后改写 |
+| `quantum` | 量子珠 | 6 | 稀 | 入赏一次得 2 个保留 | `_onStartPocket` |
+| `ironman` | 铁人 | 5 | 普 | 重珠变 1.5 倍大，珠分 ×3 | `SpawnBall` 改半径；`HitPeg` 改倍数 |
+| `rainbow` | 彩虹桥 | 6 | 稀 | 弹匣每种不同珠 +2 倍率 | `onLaunchStart` 统计弹匣种类 |
+| `fox` | 狐狸面具 | 6 | 稀 | 商店商品 -$1 | `Run:PriceOf` 读护符 |
+| `glutton` | 大胃王 | 5 | 普 | 弹匣 +4，发射次数 -1 | `stats.magazine += 4; stats.launches -= 1`（最低 1） |
+| `copycat` | 复制猫 | 9 | 传 | 复制右侧护符效果 | `_hook` 遇到 copycat 时调用 `charms[i+1]` 的钩子 |
+
+> 护符 id 与贴图文件名一致（`assets/Textures/charms/<id>.png`）。护符 `magnet` / `thunder` 与珠子 `magnet` / `thunder` 同名但分属 `C.CHARMS` / `C.BALLS` 与不同贴图目录，互不冲突。
+
+### 19.4 新增头目（8 个 + 终局）
+
+| id | 名称 | 规则 | 温和 | 实现 |
+|---|---|---|---|---|
+| `mirror` | 镜像 | 钉阵左右翻转，每种特殊钉 -1 | | `Board` 生成后 `x = W - x`；`stats.peg[k] - 1` |
+| `funnel` | 漏斗 | 两侧回收口变成吞珠口 | ✓ | `pk.kind = "void"`（无奖励） |
+| `freeze` | 冰冻 | 特殊钉要撞两次才生效 | | `peg.hp = 2` |
+| `hunger` | 饥饿 | 每发弹匣 -2 | ✓ | `stats.magazine -= 2` |
+| `static` | 静电 | 珠子互相强烈弹开 | | `stats.ballBallRest = 1.25` |
+| `blackout` | 黑幕 | 液晶关闭，大当率 -5% | | 液晶画"？？？"，不演听牌 |
+| `countdown` | 倒计时 | 每发 8 秒后珠子消失 | | `launchClock > 8` → 全部回收 |
+| `balance` | 天平 | 倍率上限 50 | | `stats.multCap = 50`，`AddMult/MulMult` 截断 |
+| `king` | 弹珠之王 | **终局 8-3 固定**：每 3 秒随机切换一条规则，目标 ×2.5 | — | `Run.bosses[8] = "king"`；Stage 内定时切 `rules` |
+
+### 19.5 新增台主（3 位 → 总计 6）
+
+| key | 名称 | 起始 | 解锁 |
+|---|---|---|---|
+| `youyou` | 幽幽 · 幽灵少女 | 8 钢珠 4 幽灵珠 + 轻羽，$4 | 通关 1 次 |
+| `qiqi` | 七七 · 老虎机少女 | 10 钢珠 1 幸运珠 + 确变之魂，$4 | 累计大当 20 次 |
+| `tieta` | 铁塔 · 重珠大叔 | 8 钢珠 3 重珠 + 铁人，$5 | 到达第 6 层 |
+
+---
+
+## 20. 局外系统细则
+
+### 20.1 难度星（通关后解锁，逐级叠加）
+
+| 星级 | 新增规则 |
+|---|---|
+| ★1 | 小台不再给过关基础奖励（$0） |
+| ★2 | 所有目标分 ×1.15 |
+| ★3 | 商店少 1 个珠子格 |
+| ★4 | 利息上限 $3 |
+| ★5 | 所有目标分再 ×1.15（累计 ×1.32） |
+| ★6 | 第 4 层起头目台叠加两条规则 |
+| ★7 | 每台发射次数 -1（最低 2） |
+| ★8 | 起始金币 $0，刷新起价 $3 |
+
+实现：`Run.new(starter, seed, stars)`，规则写成 `C.STARS[1..8]` 表，在 `CurrentStageInfo / GenerateShop / OnStageCleared / Stage.new` 读取。图鉴与纪录按星级分开记录最佳成绩。
+
+### 20.2 成就（30 个，奖励只给外观：头像框 / 台面皮肤 / 珠子拖尾色）
+
+| 类 | 示例（条件 → 奖励） |
+|---|---|
+| 爆分 | 一发入魂：单发 ≥ 100 万 → 金色拖尾；亿万富翁：单发 ≥ 1 亿 → "亿"头像框 |
+| 老虎机 | 首次大当；777：首次超级大当 → 777 台面皮肤；连庄：一发内 3 次大当 |
+| 物理 | 人海战术：同屏 ≥ 150 颗珠；连锁反应：一次爆炸连带 ≥ 30 颗钉 |
+| 构筑 | 五福临门：同时持有 5 个护符；纯钢：只用钢珠通过第 4 层 |
+| 进度 | 每位台主各通关 1 次（6 个）；★1–★8 各通关 1 次（8 个） |
+| 趣味 | 差一点：一局听牌落空 10 次；守财奴：持有 $50 |
+
+存储：`meta.achievements = { [id] = os.time() }`。成就弹出用 Toast 级横幅，**不打断局内**（排队到结算后显示）。
+
+### 20.3 每日挑战
+
+- 种子 = `tonumber(os.date("%Y%m%d"))`，台主按星期轮换，难度固定 ★2。
+- 每天只有**第一次**完整挑战计入排行榜，比"最高单发"。
+- 云端：`clientCloud:SetInt("daily_" .. yyyymmdd, bestLaunch)`，排行用 `GetRankList("daily_" .. yyyymmdd, 0, 50)`；弱网失败时本地缓存待下次上传，不阻塞游戏。
+
+### 20.4 无尽模式
+
+全台通关后可选"继续"：第 9 层起目标每层 ×2.2，头目每台都是（随机双规则）。纪录"无尽最高层"。
+
+---
+
+## 21. 新手引导
+
+**原则**：做给玩家看，不写给玩家读；每步 ≤ 12 字；全部可跳过；只在首局触发（`meta.tutorialDone`）。
+
+| 步 | 时机 | 表现 | 文案 |
+|---|---|---|---|
+| 1 | 首局进入局内 | "大力干!"按钮呼吸放大 + 手指点击动画，其余区域压暗 40% | 点这里，大力干! |
+| 2 | 第 1 颗珠撞到特殊钉 | 慢动作 0.3×，该钉圈出高亮 | 金钉=珠分 红钉=倍率 |
+| 3 | 第 1 次入赏 | 镜头不动，液晶边框闪烁 + 箭头指向启动口 | 掉进这里抽大奖 |
+| 4 | 第 1 次结算 | 分数板珠分框、倍率框依次高亮 | 珠分 × 倍率 |
+| 5 | 第 1 次进商店 | 最便宜的护符格子呼吸高亮 | 买个护符试试 |
+
+**首局保底**：首局第 1 发的第 1 次老虎机必中大当（`run.tutorial = true` 时 `jackpot = true`），保证 30 秒内看到 FEVER（3-10-30 漏斗的"30 秒首次爽感"）。
+
+---
+
+## 22. 切图与 UI 贴图接入规范（交给切图 AI / 接入 AI）
+
+### 22.1 切图规则
+
+| 项 | 规范 |
+|---|---|
+| 等分 | 1:1 合图按 3×3（或 2×2）等分；3:2 合图按 3×2 等分（每格正方形） |
+| 去底 | 只去掉**与画布边缘连通**的白色区域（从四边做洪水填充，容差 ~12），**不要全局抠白**，否则珠子高光、眼白会被挖空 |
+| 修边 | 去底后做 1px 收缩 + 1px 羽化，消除白边 |
+| 输出尺寸 | 道具/图标/钉子/符号/头像：`256×256` 透明 PNG，主体居中，四周留 8px；UI 底框（UI-A、UI-C ①–⑤）：`192×192`；火焰条 `flame_strip`：裁成 `256×96` |
+| 命名 | 严格按第 11 章各合图的"格位 → 文件"映射表 |
+| 规划格 | 合图里"规划"的格子照常切出，放入对应路径即可，代码接入时自动生效 |
+
+### 22.2 九宫格切线清单（切图 AI 必须一起输出）
+
+UI 底框需要告诉程序"四角不拉伸的范围"。切图 AI 量好每张图后写入 `assets/Textures/ui/slices.json`：
+
+```json
+{
+  "btn_primary.png":   { "top": 48, "right": 48, "bottom": 60, "left": 48 },
+  "btn_secondary.png": { "top": 48, "right": 48, "bottom": 60, "left": 48 },
+  "btn_danger.png":    { "top": 48, "right": 48, "bottom": 60, "left": 48 },
+  "dialog.png":        { "top": 56, "right": 56, "bottom": 64, "left": 56 },
+  "panel.png":         { "top": 32, "right": 32, "bottom": 32, "left": 32 },
+  "card.png":          { "top": 36, "right": 36, "bottom": 36, "left": 36 },
+  "card_selected.png": { "top": 40, "right": 40, "bottom": 40, "left": 40 },
+  "slot_empty.png":    { "top": 36, "right": 36, "bottom": 36, "left": 36 },
+  "pill.png":          { "top": 40, "right": 56, "bottom": 40, "left": 56 },
+  "launch_normal.png": { "top": 52, "right": 56, "bottom": 64, "left": 56 },
+  "launch_pressed.png":{ "top": 52, "right": 56, "bottom": 56, "left": 56 },
+  "launch_disabled.png":{ "top": 52, "right": 56, "bottom": 64, "left": 56 },
+  "box_chips.png":     { "top": 40, "right": 40, "bottom": 40, "left": 40 },
+  "box_mult.png":      { "top": 40, "right": 40, "bottom": 40, "left": 40 }
+}
+```
+
+> 上面是 192×192 素材的初值，按实际装饰大小量取：切线必须完全包住四角装饰和加厚底边，中间可拉伸区域只能是纯色。
+
+### 22.3 程序接入（接入 AI 照做）
+
+1. `UIx/Skin.lua` 新增 `Skin.IMG`（文件路径）与 `Skin.SLICE`（读取 `slices.json`，用 `cjson` + `pcall`，缺文件时为空表 → 继续用当前纯色样式）。
+2. 新建 `UIx/SkinButton.lua`：`Panel + Label` 组合按钮，`variant` 决定三张底图（normal / pressed / disabled），按下时换 pressed 图 + 缩放 0.94；**文字仍由程序绘制**，`minHeight = 44`，接口保持 `SetText / SetDisabled`，用它替换 `App.lua` 里的 `UI.Button`。
+3. 面板：`UI.Panel { backgroundImage = "Textures/ui/dialog.png", backgroundFit = "sliced", backgroundSlice = Skin.SLICE["dialog.png"] }`（参见 `recipes/ui.md` 图片渲染一节）。
+4. 对应关系：
+
+| 素材 | 用在 |
+|---|---|
+| `dialog` | 所有 Dialog 卡体 |
+| `panel` | 分数板底、商店详情区、顶栏金币底以外的面板 |
+| `card` / `card_selected` | `ItemCell`、台主卡（`setCellSelected` 切换） |
+| `slot_empty` | 护符栏空槽（有护符时仍显示底框，图标叠在上面） |
+| `pill` | `CoinTag`、价格标签 |
+| `launch_*` | "大力干!"按钮三态 |
+| `box_chips` / `box_mult` / `flame_strip` | `ScoreBar:Render` 内用 `nvgImagePattern` 替代渐变矩形与程序火焰 |
+| `icon_*`、`lamp_*` | `ArtIcon` 新增 `kind = "ui"`，走 `Art.TryImage("ui:<name>")`（需在 `Art.AUTO_DIRS` 加 `ui = "ui"`） |
+
+5. 接入后验收：360×667 与 412×915 两种分辨率下按钮文字不被裁剪、弹窗切页签 0 抖动、九宫格四角不变形。
+
+---
+
+## 23. 存档数据结构（version = 1）
+
+```text
+danzhu_save.json（信封）
+├─ version      int      存档结构版本，结构变化时 +1 并在 Save 里写迁移函数
+├─ savedAt      int      os.time()
+├─ saveSeq      int      单调递增（同秒多次保存时比较用）
+├─ summary      { bestAnte, inRun }        云端轻量摘要
+└─ body
+   ├─ meta
+   │  ├─ bestAnte / wins / runs / bestLaunch     int
+   │  ├─ discovered   { ["ball:fire"]=true, ["charm:cat"]=true, ... }
+   │  ├─ (规划) achievements { [id]=time }、tutorialDone bool、stars { [starter]=maxStar }
+   └─ run  （无进行中对局时为 nil）
+      ├─ version, seed, rngState              随机数可续
+      ├─ starter, ante, stageIdx, coins, rerollCost, phase("stage"|"shop")
+      ├─ bag        ["steel","steel","fire",...]
+      ├─ charms     ["cat","lantern",...]
+      ├─ mods       { magazine, launches, peg = { red=2, ... } }
+      ├─ bosses     [8 个头目 id]
+      ├─ shop       [{ type, id, price, sold }] | nil
+      ├─ stageSave  { score, left, index } | nil   台内断点（发射间）
+      ├─ stats      { bestLaunch, totalScore, jackpots, maxCombo, stagesCleared }
+      └─ (规划) charmData { [id] = any }、stars
+danzhu_prefs.json   { music, sfx, (规划) vibrate, lowPower }
+云端：has_save(iscore=1) / save_meta(summary) / save_body(整份信封 JSON 字符串)
+```
+
+**迁移规则**：读取时 `env.version < C.VERSION` → 依次调用 `Save.migrate[v](env)` 升级到当前版本后再使用；不能识别的高版本存档**只读不写**并提示更新。
+
+---
+
+## 24. 开发任务清单（Backlog）
+
+> 优先级：P0 = 上线必须，P1 = 首版内容，P2 = 长线。每个任务完成后都要跑 `tests/test_all.lua`；动数值的再跑 `sim_balance.lua 100`。
+
+| ID | 任务 | 优先 | 依赖 | 验收 |
+|---|---|---|---|---|
+| T01 | 真机跑通 Demo，修所有报错与适配问题 | P0 | — | 25 节「待验证项」逐条确认；`runtime.log` 0 条 Layout Warning |
+| T02 | 接入 UI-A/B/C 贴图（22 章） | P0 | 切图 | 22.3 第 5 条 |
+| T03 | 接入珠子/护符/改造/钉子/符号/头像合图 | P0 | 切图 | 放入路径即生效；缺图自动回退 |
+| T04 | 音频接入（12 章清单） | P0 | 音频素材 | 静音开关持久化；同名音效 50ms 节流 |
+| T05 | 新手引导 + 首局保底大当（21 章） | P0 | — | 新号 30 秒内看到 FEVER |
+| T06 | 框架能力（19.1 全部） | P1 | — | 新增单测覆盖 Delay / onStageFail / charmData 存档往返 |
+| T07 | 新珠子 ×9（19.2） | P1 | T06 | 图鉴自动出现；全部图标可程序化绘制 |
+| T08 | 新护符 ×24（19.3） | P1 | T06 | 模拟器通关率仍在 3–15% |
+| T09 | 新头目 ×8 + 终局弹珠之王（19.4） | P1 | T06 | 每个头目单测：规则生效 |
+| T10 | 新台主 ×3（19.5） | P1 | T07 T08 | 解锁条件正确写入 meta |
+| T11 | 头目徽章 / 台面背景 / Logo 贴图接入 | P1 | 切图 | `Art.TryImage("boss:<id>")` 用于待机告示牌 |
+| T12 | 难度星 ★1–★8（20.1） | P1 | — | 每级规则单测 |
+| T13 | 成就 30 个（20.2） | P2 | — | 结算后排队弹出，不打断局内 |
+| T14 | 每日挑战 + 排行榜（20.3） | P2 | 云 | 弱网降级不阻塞 |
+| T15 | 无尽模式（20.4） | P2 | — | |
+| T16 | 激励视频 3 个点位（14 章） | P1 | 平台 SDK | 未就绪置灰；完整观看才发奖；防重复 |
+| T17 | 埋点（15 章） | P1 | — | 漏斗事件齐全 |
+| T18 | 设置：震动、省电模式（关拖尾/辉光/粒子减半） | P2 | — | 低端机 ≥ 50 帧 |
+| T19 | `App.lua` 拆分为 `UIx/Pages/*.lua` + `UIx/Dialogs/*.lua` | P1 | — | 行为不变，测试全绿 |
+| T20 | 存档迁移框架（23 章） | P1 | — | v1→v2 迁移单测 |
+
+---
+
+## 25. Demo 已知限制与待真机验证项
+
+### 25.1 未在真机/引擎中运行过
+
+Demo 只通过了纯 Lua 测试（严格 NanoVG / UI 测试桩）。以下接口按官方文档写成，但**必须在真机上确认**：
+
+| 项 | 位置 | 若不符合怎么改 |
+|---|---|---|
+| 粗体字体 `Fonts/MiSans-Bold.ttf` 是否存在 | `main.lua` `UI.Init` | 去掉 bold 项，`Art.FONT_BOLD = Art.FONT` |
+| `UI.Theme.FontFace("sans","bold")` 返回值能否直接给 `nvgFontFace` | `main.lua` | 改为 UI 注册字体时的真实名字 |
+| 自定义控件 `Render(nvg)` 坐标系与 UI 缩放 | `Render/Widgets.lua` | 若错位，乘以 `UI.Scale` 或改用 `GetAbsoluteLayout` 的物理像素 |
+| `nvgIntersectScissor` 在 UI 渲染中的表现 | `BoardView:Render` | 若裁剪异常改为 `nvgScissor` |
+| `nvgCreateImage(vg, path, 0)` 能否按资源路径加载 | `Art.TryImage` | 改用 UI 库的 ImageCache 接口 |
+| `InputFocus` 事件与 `Focus` 字段 | `main.lua` | 改订阅引擎实际的切后台事件 |
+| `Hide()` 是否让出布局空间（"继续"按钮隐藏时） | 标题页按钮行 | 改用 `SetStyle({ display = "none" })` 或宽度 0 |
+| `Widget:Animate` 支持 `rotate` 关键帧 | 护符栏弹跳 | 去掉 rotate 只留 scale |
+| `UI.Toggle:SetChecked` | 设置弹窗 | 以 `UI.Toggle` 实际方法名为准 |
+| 新增 `.lua` 没有 `.meta` 文件 | `scripts/**` | 由 Maker 同步时生成；若不生成需手动补 |
+
+### 25.2 设计/实现上的已知取舍
+
+- **两侧回收口进珠偏多**（约占落袋 40%）：钉阵左右对称后两侧各有一条边道，回收口会把珠子重发一次，不算浪费。若觉得太多，可缩窄边道（注意不要形成 V 形夹缝，见 9.3 第 4 条）。
+- **音频文件缺失**：Demo 静音运行，`Game/Audio.lua` 会自动跳过缺失文件。
+- **头目徽章 / 台面背景 / UI 底框贴图尚未接入**（见 T02、T11）。
+- **局内飞珠时不能卖护符**（避免中途改规则的边界问题）；改造只能在商店买。
+- **单个 `App.lua` 约 1000 行**：扩建前建议先做 T19 拆分。
+- **数值模拟用的是贪心 AI**：只能代表"不懂流派的玩家"下限，人类实测数据回来后要重调第 6–8 层。
+
+---
+
+## 附录 · 名词表
 
 | 名词 | 含义 |
 |---|---|

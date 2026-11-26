@@ -6,6 +6,7 @@
 - 引擎：UrhoX · Lua 5.4 · `urhox-libs/UI`（Yoga + NanoVG）
 - 入口：`scripts/main.lua`
 - 完整方案（玩法 / 数值 / UI / 美术提示词 / 技术 / 路线图）：[`docs/GDD.md`](docs/GDD.md)
+  - 扩建入口：第 19 章完整版内容规格、第 22 章切图与接入规范、第 24 章开发任务清单、第 25 章待真机验证项
 
 ## Demo 内容
 
