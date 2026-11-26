@@ -423,47 +423,117 @@ function ArtIcon:Render(vg)
 end
 
 -- ===========================================================================
--- LogoArt：标题页动态弹珠台 Logo
+-- LogoArt：标题页动态弹珠台 Logo（真实物理：复用 Game/Physics）
+--
+-- 本地坐标：圆心 (0,0)，半径 100；渲染时按 R/100 缩放。
+--   圆形外框 = 线段近似（底部 65°~115° 留出口）
+--   钉子 = 静态圆 r=2.5（蜂窝阵），珠子 = 动态圆 r=7
+--   珠子从顶部生成 → 撞钉弹跳 → 从底部出口掉出后回收重生
 -- ===========================================================================
+local Physics = require("Game/Physics")
+
 local LogoArt = UI.Widget:Extend("LogoArt")
 W.LogoArt = LogoArt
+
+local LOGO_KINDS = { "steel", "gold", "fire", "prism", "lucky", "rubber", "split", "ghost" }
+local LOGO_MAX_BALLS = 8
 
 function LogoArt:Init(props)
     props = props or {}
     props.pointerEvents = "none"
     UI.Widget.Init(self, props)
+    self:_buildSim()
+end
+
+function LogoArt:_buildSim()
+    local pegs, segs = {}, {}
+    local id = 0
+    for row = 0, 5 do
+        for col = -4, 4 do
+            local x = (col + (row % 2) * 0.5) * 24
+            local y = -45 + row * 20
+            if x * x + y * y < 84 * 84 then
+                id = id + 1
+                pegs[#pegs + 1] = { id = id, x = x, y = y, r = 2.5, alive = true, flash = 0 }
+            end
+        end
+    end
+    local N = 36
+    for i = 0, N - 1 do
+        local a1 = i / N * pi * 2
+        local a2 = (i + 1) / N * pi * 2
+        local mid = (a1 + a2) / 2
+        -- y 向下：90° 为正下方，留出口
+        if not (mid > pi * 65 / 180 and mid < pi * 115 / 180) then
+            segs[#segs + 1] = { x1 = cos(a1) * 100, y1 = sin(a1) * 100, x2 = cos(a2) * 100, y2 = sin(a2) * 100 }
+        end
+    end
+    self.pegs = pegs
+    self.phys = Physics.new({
+        gravity = 380, substeps = 4, maxSpeed = 520, pegRest = 0.55, wallRest = 0.5,
+        jitter = 0.12, ballBallRest = 0.6, rand = math.random,
+    })
+    self.phys:SetStatic(pegs, segs, {})
+    self.cb = { peg = function(ball, peg) peg.flash = 1; self.hits = self.hits + 1 end }
+    self.nextId = 0
+    self.spawnT = 0
+    self.lastT = nil
+    self.hits = 0
+end
+
+function LogoArt:_step(dt)
+    local phys = self.phys
+    self.spawnT = self.spawnT - dt
+    if self.spawnT <= 0 and #phys.balls < LOGO_MAX_BALLS then
+        self.spawnT = 0.45
+        self.nextId = self.nextId + 1
+        phys:AddBall({
+            id = self.nextId, kind = LOGO_KINDS[(self.nextId - 1) % #LOGO_KINDS + 1],
+            x = (math.random() - 0.5) * 60, y = -85, vx = (math.random() - 0.5) * 80, vy = 0,
+            r = 7, rest = 0.5,
+        })
+    end
+    phys:Step(dt, self.cb)
+    for _, b in ipairs(phys.balls) do
+        if b.y > 112 or b.x < -130 or b.x > 130 then b.alive = false end
+    end
+    phys:Compact()
+    for _, p in ipairs(self.pegs) do
+        if p.flash > 0 then p.flash = max(0, p.flash - dt * 4) end
+    end
 end
 
 function LogoArt:Render(vg)
     local l = self:GetAbsoluteLayout()
     local t = W.time
+    -- 由渲染时间驱动模拟（只在可见时推进），dt 钳制防切后台穿模
+    local dt = self.lastT and (t - self.lastT) or 0
+    self.lastT = t
+    if dt > 0 then self:_step(min(dt, 1 / 30)) end
+
     local cx, cy = l.x + l.w / 2, l.y + l.h * 0.46
     local R = min(l.w, l.h) * 0.42
+    local k = R / 100
     Art.Glow(vg, cx, cy, R * 1.6, { 255, 120, 200 }, 70)
-    -- 圆形台框
+    -- 圆形台框（底部出口处不描边）
     nvgBeginPath(vg)
     nvgCircle(vg, cx, cy, R)
     nvgFillPaint(vg, nvgRadialGradient(vg, cx, cy - R * 0.3, R * 0.1, R, Art.rgba(80, 30, 110), Art.rgba(20, 8, 40)))
     nvgFill(vg)
-    Art.Ring(vg, cx, cy, R, 4, Art.hsv(t * 0.15, 0.5, 1), 255)
-    -- 钉阵
-    for row = 0, 5 do
-        for col = -3, 3 do
-            local x = cx + (col + (row % 2) * 0.5) * R * 0.24
-            local y = cy - R * 0.45 + row * R * 0.2
-            local dx, dy = x - cx, y - cy
-            if dx * dx + dy * dy < (R * 0.86) ^ 2 then
-                Art.Circle(vg, x, y, R * 0.025, { 230, 230, 255 }, 220)
-            end
-        end
+    nvgBeginPath(vg)
+    nvgArc(vg, cx, cy, R, pi * 115 / 180, pi * 65 / 180 + pi * 2, NVG_CW)
+    nvgStrokeWidth(vg, 4)
+    nvgStrokeColor(vg, Art.c(Art.hsv(t * 0.15, 0.5, 1), 255))
+    nvgStroke(vg)
+    -- 钉阵（被撞闪白）
+    for _, p in ipairs(self.pegs) do
+        local x, y = cx + p.x * k, cy + p.y * k
+        if p.flash > 0 then Art.Glow(vg, x, y, p.r * k * 5, { 255, 255, 255 }, 170 * p.flash) end
+        Art.Circle(vg, x, y, p.r * k, { 230, 230, 255 }, 220)
     end
-    -- 下落的珠子
-    for i = 0, 6 do
-        local ph = (t * 0.45 + i / 7) % 1
-        local x = cx + sin(ph * 9 + i * 2.1) * R * 0.5
-        local y = cy - R * 0.8 + ph * R * 1.5
-        local kinds = { "steel", "gold", "fire", "prism", "lucky", "rubber", "split" }
-        Art.Ball(vg, kinds[i + 1], x, y, R * 0.07, t)
+    -- 珠子
+    for _, b in ipairs(self.phys.balls) do
+        Art.Ball(vg, b.kind, cx + b.x * k, cy + b.y * k, b.r * k, t + b.id * 0.3)
     end
     -- 标题
     local ty = l.y + l.h * 0.88

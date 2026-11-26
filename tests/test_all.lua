@@ -48,6 +48,29 @@ test("所有图标 / 钉子 / 符号 / 立绘 可绘制（待机态 + 动画态�
   for _, id in ipairs(C.CHARM_ORDER) do assert(C.CHARMS[id].name and C.CHARMS[id].desc, id) end
 end)
 
+test("标题 Logo：珠子真实撞钉、不穿钉、从底部出口回收", function()
+  local W = require("Render/Widgets")
+  local logo = W.LogoArt { width = 300, height = 300 }
+  local maxPen, maxBalls = 0, 0
+  for _ = 1, 60 * 20 do
+    logo:_step(1 / 60)
+    maxBalls = math.max(maxBalls, #logo.phys.balls)
+    for _, b in ipairs(logo.phys.balls) do
+      for _, p in ipairs(logo.pegs) do
+        local d = math.sqrt((b.x - p.x) ^ 2 + (b.y - p.y) ^ 2)
+        maxPen = math.max(maxPen, (b.r + p.r) - d)
+      end
+      assert(b.x * b.x + b.y * b.y < 104 * 104 or b.y > 80, "ball escaped through the frame")
+    end
+  end
+  log(string.format("     logo pegHits=%d spawned=%d maxBalls=%d maxPenetration=%.2f", logo.hits, logo.nextId, maxBalls, maxPen))
+  assert(logo.hits > 100, "balls are not hitting pegs")
+  assert(logo.nextId > 20, "balls are not exiting/recycling")
+  assert(maxPen < 2.0, "balls penetrate pegs")
+  logo.layout = { x = 0, y = 0, w = 300, h = 300 }
+  W.time = 1; logo:Render(VG); W.time = 1.016; logo:Render(VG)
+end)
+
 log("== 2. 完整流程 ==")
 local App = require("UIx/App")
 local Save = require("Game/Save")
